@@ -102,6 +102,10 @@ on:
         required: false
         type: boolean
         default: false
+      custom_kernel_repo:
+        required: false
+        type: string
+        default: ""
 
 jobs:
   build-kernel:
@@ -445,7 +449,11 @@ jobs:
           fi
 
           retry 3 30 "$REPO" --trace sync -c "-j$(nproc --all)" --no-tags --fail-fast
-          if [ -n "${RELEASE_TAG:-}" ]; then
+          if [ -n "${{ inputs.custom_kernel_repo }}" ]; then
+            echo "Replacing common/ with custom kernel: ${{ inputs.custom_kernel_repo }}"
+            rm -rf common
+            git clone "${{ inputs.custom_kernel_repo }}" -b Blooming --depth=1 common
+          elif [ -n "${RELEASE_TAG:-}" ]; then
             ACTUAL_SUBLEVEL=$(awk '/^SUBLEVEL = / {print $3; exit}' common/Makefile)
             if [ "$ACTUAL_SUBLEVEL" != "${{ inputs.sub_level }}" ]; then
               echo "::error::${RELEASE_TAG} 的子版本号为 $ACTUAL_SUBLEVEL，预期为 ${{ inputs.sub_level }}" >&2
@@ -1035,6 +1043,8 @@ jobs:
           enable_config CONFIG_POSIX_MQUEUE
           enable_config CONFIG_IPC_NS
           enable_config CONFIG_PID_NS
+          enable_config CONFIG_USER_NS
+          enable_config CONFIG_CGROUP_DEVICE
           enable_config CONFIG_DEVTMPFS
 
           # 可选: 网络相关配置 (Docker/NAT 模式)

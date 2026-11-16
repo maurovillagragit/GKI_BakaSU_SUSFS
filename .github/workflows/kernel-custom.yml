@@ -156,6 +156,11 @@ on:
         required: false
         type: boolean
         default: false
+      custom_kernel_repo:
+        description: "Custom kernel repo URL"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   validate-custom-kmi:
@@ -203,3 +208,4 @@ jobs:
       build_bypass: ${{ inputs.build_bypass || false }}
       apply_custom_patches: ${{ inputs.apply_custom_patches || false }}
       disable_werror: ${{ inputs.disable_werror || false }}
+      custom_kernel_repo: ${{ inputs.custom_kernel_repo || '' }}
