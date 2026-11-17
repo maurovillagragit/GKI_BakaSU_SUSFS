@@ -461,15 +461,21 @@ jobs:
             sed -i 's|KMI_GENERATION=9|KMI_GENERATION=0|' common/build.config.common
             sed -i 's|HERMETIC_TOOLCHAIN=${HERMETIC_TOOLCHAIN:-1}|HERMETIC_TOOLCHAIN=0|' common/build.config.common
 
-            # 2. Symlink build/build-tools -> build/kernel/build-tools
+            # 2. Symlink legacy Android 12 paths so ANY hardcoded path works
             mkdir -p build/build-tools
             ln -sfn ../kernel/build-tools/path build/build-tools/path 2>/dev/null || true
+            mkdir -p prebuilts-master
+            ln -sfn ../prebuilts/clang prebuilts-master/clang 2>/dev/null || true
 
             # 3. Locate Clang compiler from Android 13 repo prebuilts
-            CLANG_DIR=$(ls -d prebuilts-master/clang/host/linux-x86/clang-r* 2>/dev/null | tail -n1 || ls -d prebuilts/clang/host/linux-x86/clang-r* 2>/dev/null | tail -n1)
-            if [ -n "$CLANG_DIR" ]; then
-              echo "Configuring CLANG_PREBUILT_BIN=${CLANG_DIR}/bin"
-              sed -i "s|CLANG_PREBUILT_BIN=.*|CLANG_PREBUILT_BIN=${CLANG_DIR}/bin|" common/build.config.common
+            REAL_CLANG=$(find prebuilts/ -name "clang" -type f -perm /111 2>/dev/null | head -n1)
+            if [ -n "$REAL_CLANG" ]; then
+              CLANG_BIN_DIR=$(dirname "$REAL_CLANG")
+              echo "Found real Clang directory: $CLANG_BIN_DIR"
+              sed -i "s|CLANG_PREBUILT_BIN=.*|CLANG_PREBUILT_BIN=${CLANG_BIN_DIR}|" common/build.config.common
+              CLANG_PARENT=$(dirname "$CLANG_BIN_DIR")
+              mkdir -p prebuilts-master/clang/host/linux-x86
+              ln -sfn "$CLANG_PARENT" prebuilts-master/clang/host/linux-x86/clang-r416183b 2>/dev/null || true
             fi
 
             # 4. Disable ABI strict checks so defconfig additions (Docker) don't fail KMI enforcement
@@ -1638,6 +1644,11 @@ jobs:
               if [ "${{ inputs.disable_werror }}" = "true" ]; then
                 disable_werror_config "$DEFCONFIG"
               fi
+              REAL_CLANG=$(find prebuilts/ -name "clang" -type f -perm /111 2>/dev/null | head -n1)
+              if [ -n "$REAL_CLANG" ]; then
+                export PATH="$(dirname "$REAL_CLANG"):$PATH"
+                echo "Added clang to PATH: $(dirname "$REAL_CLANG")"
+              fi
               LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh CC="/usr/bin/ccache clang" || exit 1
               strings "out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist/Image" | grep 'Linux version'
             else
@@ -1742,6 +1753,11 @@ jobs:
               # 5.x 内核使用传统构建脚本
               if [ "${{ inputs.disable_werror }}" = "true" ]; then
                 disable_werror_config "$DEFCONFIG"
+              fi
+              REAL_CLANG=$(find prebuilts/ -name "clang" -type f -perm /111 2>/dev/null | head -n1)
+              if [ -n "$REAL_CLANG" ]; then
+                export PATH="$(dirname "$REAL_CLANG"):$PATH"
+                echo "Added clang to PATH: $(dirname "$REAL_CLANG")"
               fi
               LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh CC="/usr/bin/ccache clang" || exit 1
               strings "out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist/Image" | grep 'Linux version'
