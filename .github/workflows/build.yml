@@ -478,17 +478,29 @@ jobs:
               ln -sfn "$CLANG_PARENT" prebuilts-master/clang/host/linux-x86/clang-r416183b 2>/dev/null || true
             fi
 
-            # 4. Disable ABI strict checks so defconfig additions (Docker) don't fail KMI enforcement
-            sed -i '/ABI_DEFINITION/d' common/build.config.gki.aarch64 2>/dev/null || true
-            sed -i '/KMI_SYMBOL_LIST/d' common/build.config.gki.aarch64 2>/dev/null || true
-            sed -i '/TIDY_ABI/d' common/build.config.gki.aarch64 2>/dev/null || true
-            sed -i '/ADDITIONAL_KMI_SYMBOL_LISTS/,/^[[:space:]]*"[[:space:]]*$/d' common/build.config.gki.aarch64 2>/dev/null || true
-            sed -i 's/KMI_ENFORCED=1/KMI_ENFORCED=0/' common/build.config.gki.aarch64 2>/dev/null || true
-            sed -i 's/TRIM_NONLISTED_KMI=1/TRIM_NONLISTED_KMI=0/' common/build.config.gki.aarch64 2>/dev/null || true
-            sed -i '/POST_DEFCONFIG_CMDS/d' common/build.config.gki 2>/dev/null || true
-            sed -i '/check_defconfig/d' common/build.config.gki 2>/dev/null || true
+            # 4. Canonical AOSP GKI build config (clean, no vendor symbol list syntax hazards)
+            cat << 'EOF' > common/build.config.gki.aarch64
+. ${ROOT_DIR}/${KERNEL_DIR}/build.config.common
+. ${ROOT_DIR}/${KERNEL_DIR}/build.config.aarch64
+. ${ROOT_DIR}/${KERNEL_DIR}/build.config.gki
 
-            # 5. Neutralize check_symbol_list so forbidden symbols (like filp_open in Qualcomm drivers) never fail build
+MAKE_GOALS="${MAKE_GOALS}
+Image
+"
+
+FILES="${FILES}
+arch/arm64/boot/Image
+"
+
+TRIM_NONLISTED_KMI=0
+KMI_SYMBOL_LIST_STRICT_MODE=0
+KMI_ENFORCED=0
+BUILD_SYSTEM_DLKM=0
+EOF
+
+            echo "DEFCONFIG=gki_defconfig" > common/build.config.gki
+
+            # 5. Neutralize check_symbol_list so forbidden symbols never fail build
             find build/ -name "check_symbol_list" -type f 2>/dev/null | while read -r f; do
               printf '#!/bin/sh\nexit 0\n' > "$f"
               chmod +x "$f"
@@ -1645,18 +1657,32 @@ jobs:
               echo "已在 $config_file 中禁用 CONFIG_WERROR（-Werror）"
             }
 
-            sed -i 's/BUILD_SYSTEM_DLKM=1/BUILD_SYSTEM_DLKM=0/' ./common/build.config.gki.aarch64
-            sed -i '/MODULES_ORDER=android\/gki_aarch64_modules/d' ./common/build.config.gki.aarch64
-            sed -i '/KMI_SYMBOL_LIST/d' ./common/build.config.gki.aarch64
-            sed -i '/ABI_DEFINITION/d' ./common/build.config.gki.aarch64
-            sed -i '/TIDY_ABI/d' ./common/build.config.gki.aarch64
-            sed -i '/ADDITIONAL_KMI_SYMBOL_LISTS/,/^[[:space:]]*"[[:space:]]*$/d' ./common/build.config.gki.aarch64
-            sed -i 's/KMI_ENFORCED=1/KMI_ENFORCED=0/' ./common/build.config.gki.aarch64
-            sed -i 's/TRIM_NONLISTED_KMI=1/TRIM_NONLISTED_KMI=0/' ./common/build.config.gki.aarch64
-            find build/ -name "check_symbol_list" -type f 2>/dev/null | while read -r f; do
-              printf '#!/bin/sh\nexit 0\n' > "$f"
-              chmod +x "$f"
-            done
+            if [ -n "${{ inputs.custom_kernel_repo }}" ]; then
+              cat << 'EOF' > ./common/build.config.gki.aarch64
+. ${ROOT_DIR}/${KERNEL_DIR}/build.config.common
+. ${ROOT_DIR}/${KERNEL_DIR}/build.config.aarch64
+. ${ROOT_DIR}/${KERNEL_DIR}/build.config.gki
+
+MAKE_GOALS="${MAKE_GOALS}
+Image
+"
+FILES="${FILES}
+arch/arm64/boot/Image
+"
+TRIM_NONLISTED_KMI=0
+KMI_SYMBOL_LIST_STRICT_MODE=0
+KMI_ENFORCED=0
+BUILD_SYSTEM_DLKM=0
+EOF
+              find build/ -name "check_symbol_list" -type f 2>/dev/null | while read -r f; do
+                printf '#!/bin/sh\nexit 0\n' > "$f"
+                chmod +x "$f"
+              done
+            else
+              sed -i 's/BUILD_SYSTEM_DLKM=1/BUILD_SYSTEM_DLKM=0/' ./common/build.config.gki.aarch64
+              sed -i '/MODULES_ORDER=android\/gki_aarch64_modules/d' ./common/build.config.gki.aarch64
+              sed -i '/KMI_SYMBOL_LIST_STRICT_MODE/d' ./common/build.config.gki.aarch64
+            fi
 
             if [ -f "build/build.sh" ]; then
               # 5.x 内核使用传统构建脚本
@@ -1764,18 +1790,32 @@ jobs:
               echo "已在 $config_file 中禁用 CONFIG_WERROR（-Werror）"
             }
 
-            sed -i 's/BUILD_SYSTEM_DLKM=1/BUILD_SYSTEM_DLKM=0/' ./common/build.config.gki.aarch64
-            sed -i '/MODULES_ORDER=android\/gki_aarch64_modules/d' ./common/build.config.gki.aarch64
-            sed -i '/KMI_SYMBOL_LIST/d' ./common/build.config.gki.aarch64
-            sed -i '/ABI_DEFINITION/d' ./common/build.config.gki.aarch64
-            sed -i '/TIDY_ABI/d' ./common/build.config.gki.aarch64
-            sed -i '/ADDITIONAL_KMI_SYMBOL_LISTS/,/^[[:space:]]*"[[:space:]]*$/d' ./common/build.config.gki.aarch64
-            sed -i 's/KMI_ENFORCED=1/KMI_ENFORCED=0/' ./common/build.config.gki.aarch64
-            sed -i 's/TRIM_NONLISTED_KMI=1/TRIM_NONLISTED_KMI=0/' ./common/build.config.gki.aarch64
-            find build/ -name "check_symbol_list" -type f 2>/dev/null | while read -r f; do
-              printf '#!/bin/sh\nexit 0\n' > "$f"
-              chmod +x "$f"
-            done
+            if [ -n "${{ inputs.custom_kernel_repo }}" ]; then
+              cat << 'EOF' > ./common/build.config.gki.aarch64
+. ${ROOT_DIR}/${KERNEL_DIR}/build.config.common
+. ${ROOT_DIR}/${KERNEL_DIR}/build.config.aarch64
+. ${ROOT_DIR}/${KERNEL_DIR}/build.config.gki
+
+MAKE_GOALS="${MAKE_GOALS}
+Image
+"
+FILES="${FILES}
+arch/arm64/boot/Image
+"
+TRIM_NONLISTED_KMI=0
+KMI_SYMBOL_LIST_STRICT_MODE=0
+KMI_ENFORCED=0
+BUILD_SYSTEM_DLKM=0
+EOF
+              find build/ -name "check_symbol_list" -type f 2>/dev/null | while read -r f; do
+                printf '#!/bin/sh\nexit 0\n' > "$f"
+                chmod +x "$f"
+              done
+            else
+              sed -i 's/BUILD_SYSTEM_DLKM=1/BUILD_SYSTEM_DLKM=0/' ./common/build.config.gki.aarch64
+              sed -i '/MODULES_ORDER=android\/gki_aarch64_modules/d' ./common/build.config.gki.aarch64
+              sed -i '/KMI_SYMBOL_LIST_STRICT_MODE/d' ./common/build.config.gki.aarch64
+            fi
 
             if [ -f "build/build.sh" ]; then
               # 5.x 内核使用传统构建脚本
