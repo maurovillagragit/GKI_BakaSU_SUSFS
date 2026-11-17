@@ -453,6 +453,30 @@ jobs:
             echo "Replacing common/ with custom kernel: ${{ inputs.custom_kernel_repo }}"
             rm -rf common
             git clone "${{ inputs.custom_kernel_repo }}" -b Blooming --depth=1 common
+
+            echo "=== Adapting Miku kernel for Android 13 toolchain ==="
+            # 1. Update Android 12 paths to Android 13 paths in build.config.common
+            sed -i 's|BUILDTOOLS_PREBUILT_BIN=build/build-tools/path/linux-x86|BUILDTOOLS_PREBUILT_BIN=build/kernel/build-tools/path/linux-x86|' common/build.config.common
+            sed -i 's|BRANCH=android12-5.10|BRANCH=android13-5.10|' common/build.config.common
+            sed -i 's|KMI_GENERATION=9|KMI_GENERATION=0|' common/build.config.common
+            sed -i 's|HERMETIC_TOOLCHAIN=${HERMETIC_TOOLCHAIN:-1}|HERMETIC_TOOLCHAIN=0|' common/build.config.common
+
+            # 2. Symlink build/build-tools -> build/kernel/build-tools
+            mkdir -p build/build-tools
+            ln -sfn ../kernel/build-tools/path build/build-tools/path 2>/dev/null || true
+
+            # 3. Locate Clang compiler from Android 13 repo prebuilts
+            CLANG_DIR=$(ls -d prebuilts-master/clang/host/linux-x86/clang-r* 2>/dev/null | tail -n1 || ls -d prebuilts/clang/host/linux-x86/clang-r* 2>/dev/null | tail -n1)
+            if [ -n "$CLANG_DIR" ]; then
+              echo "Configuring CLANG_PREBUILT_BIN=${CLANG_DIR}/bin"
+              sed -i "s|CLANG_PREBUILT_BIN=.*|CLANG_PREBUILT_BIN=${CLANG_DIR}/bin|" common/build.config.common
+            fi
+
+            # 4. Disable ABI strict checks so defconfig additions (Docker) don't fail KMI enforcement
+            sed -i 's/KMI_ENFORCED=1/KMI_ENFORCED=0/' common/build.config.gki.aarch64 2>/dev/null || true
+            sed -i 's/TRIM_NONLISTED_KMI=1/TRIM_NONLISTED_KMI=0/' common/build.config.gki.aarch64 2>/dev/null || true
+            sed -i '/POST_DEFCONFIG_CMDS/d' common/build.config.gki 2>/dev/null || true
+            sed -i '/check_defconfig/d' common/build.config.gki 2>/dev/null || true
           elif [ -n "${RELEASE_TAG:-}" ]; then
             ACTUAL_SUBLEVEL=$(awk '/^SUBLEVEL = / {print $3; exit}' common/Makefile)
             if [ "$ACTUAL_SUBLEVEL" != "${{ inputs.sub_level }}" ]; then
@@ -1046,6 +1070,12 @@ jobs:
           enable_config CONFIG_USER_NS
           enable_config CONFIG_CGROUP_DEVICE
           enable_config CONFIG_DEVTMPFS
+          enable_config CONFIG_UTS_NS
+          enable_config_if_defined CONFIG_BRIDGE
+          enable_config_if_defined CONFIG_VETH
+          enable_config_if_defined CONFIG_OVERLAY_FS
+          enable_config_if_defined CONFIG_IP_NF_NAT
+          enable_config_if_defined CONFIG_IP_NF_TARGET_MASQUERADE
 
           # 可选: 网络相关配置 (Docker/NAT 模式)
           enable_config_if_defined CONFIG_NETFILTER_XT_MATCH_ADDRTYPE
