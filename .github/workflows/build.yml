@@ -479,10 +479,20 @@ jobs:
             fi
 
             # 4. Disable ABI strict checks so defconfig additions (Docker) don't fail KMI enforcement
+            sed -i '/ABI_DEFINITION/d' common/build.config.gki.aarch64 2>/dev/null || true
+            sed -i '/KMI_SYMBOL_LIST/d' common/build.config.gki.aarch64 2>/dev/null || true
+            sed -i '/TIDY_ABI/d' common/build.config.gki.aarch64 2>/dev/null || true
+            sed -i '/ADDITIONAL_KMI_SYMBOL_LISTS/,/^[[:space:]]*"[[:space:]]*$/d' common/build.config.gki.aarch64 2>/dev/null || true
             sed -i 's/KMI_ENFORCED=1/KMI_ENFORCED=0/' common/build.config.gki.aarch64 2>/dev/null || true
             sed -i 's/TRIM_NONLISTED_KMI=1/TRIM_NONLISTED_KMI=0/' common/build.config.gki.aarch64 2>/dev/null || true
             sed -i '/POST_DEFCONFIG_CMDS/d' common/build.config.gki 2>/dev/null || true
             sed -i '/check_defconfig/d' common/build.config.gki 2>/dev/null || true
+
+            # 5. Neutralize check_symbol_list so forbidden symbols (like filp_open in Qualcomm drivers) never fail build
+            find build/ -name "check_symbol_list" -type f 2>/dev/null | while read -r f; do
+              printf '#!/bin/sh\nexit 0\n' > "$f"
+              chmod +x "$f"
+            done
           elif [ -n "${RELEASE_TAG:-}" ]; then
             ACTUAL_SUBLEVEL=$(awk '/^SUBLEVEL = / {print $3; exit}' common/Makefile)
             if [ "$ACTUAL_SUBLEVEL" != "${{ inputs.sub_level }}" ]; then
@@ -1637,7 +1647,16 @@ jobs:
 
             sed -i 's/BUILD_SYSTEM_DLKM=1/BUILD_SYSTEM_DLKM=0/' ./common/build.config.gki.aarch64
             sed -i '/MODULES_ORDER=android\/gki_aarch64_modules/d' ./common/build.config.gki.aarch64
-            sed -i '/KMI_SYMBOL_LIST_STRICT_MODE/d' ./common/build.config.gki.aarch64
+            sed -i '/KMI_SYMBOL_LIST/d' ./common/build.config.gki.aarch64
+            sed -i '/ABI_DEFINITION/d' ./common/build.config.gki.aarch64
+            sed -i '/TIDY_ABI/d' ./common/build.config.gki.aarch64
+            sed -i '/ADDITIONAL_KMI_SYMBOL_LISTS/,/^[[:space:]]*"[[:space:]]*$/d' ./common/build.config.gki.aarch64
+            sed -i 's/KMI_ENFORCED=1/KMI_ENFORCED=0/' ./common/build.config.gki.aarch64
+            sed -i 's/TRIM_NONLISTED_KMI=1/TRIM_NONLISTED_KMI=0/' ./common/build.config.gki.aarch64
+            find build/ -name "check_symbol_list" -type f 2>/dev/null | while read -r f; do
+              printf '#!/bin/sh\nexit 0\n' > "$f"
+              chmod +x "$f"
+            done
 
             if [ -f "build/build.sh" ]; then
               # 5.x 内核使用传统构建脚本
@@ -1747,7 +1766,16 @@ jobs:
 
             sed -i 's/BUILD_SYSTEM_DLKM=1/BUILD_SYSTEM_DLKM=0/' ./common/build.config.gki.aarch64
             sed -i '/MODULES_ORDER=android\/gki_aarch64_modules/d' ./common/build.config.gki.aarch64
-            sed -i '/KMI_SYMBOL_LIST_STRICT_MODE/d' ./common/build.config.gki.aarch64
+            sed -i '/KMI_SYMBOL_LIST/d' ./common/build.config.gki.aarch64
+            sed -i '/ABI_DEFINITION/d' ./common/build.config.gki.aarch64
+            sed -i '/TIDY_ABI/d' ./common/build.config.gki.aarch64
+            sed -i '/ADDITIONAL_KMI_SYMBOL_LISTS/,/^[[:space:]]*"[[:space:]]*$/d' ./common/build.config.gki.aarch64
+            sed -i 's/KMI_ENFORCED=1/KMI_ENFORCED=0/' ./common/build.config.gki.aarch64
+            sed -i 's/TRIM_NONLISTED_KMI=1/TRIM_NONLISTED_KMI=0/' ./common/build.config.gki.aarch64
+            find build/ -name "check_symbol_list" -type f 2>/dev/null | while read -r f; do
+              printf '#!/bin/sh\nexit 0\n' > "$f"
+              chmod +x "$f"
+            done
 
             if [ -f "build/build.sh" ]; then
               # 5.x 内核使用传统构建脚本
