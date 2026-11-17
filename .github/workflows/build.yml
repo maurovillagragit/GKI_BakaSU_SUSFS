@@ -479,24 +479,22 @@ jobs:
             fi
 
             # 4. Canonical AOSP GKI build config (clean, no vendor symbol list syntax hazards)
-            cat << 'EOF' > common/build.config.gki.aarch64
-. ${ROOT_DIR}/${KERNEL_DIR}/build.config.common
-. ${ROOT_DIR}/${KERNEL_DIR}/build.config.aarch64
-. ${ROOT_DIR}/${KERNEL_DIR}/build.config.gki
-
-MAKE_GOALS="${MAKE_GOALS}
-Image
-"
-
-FILES="${FILES}
-arch/arm64/boot/Image
-"
-
-TRIM_NONLISTED_KMI=0
-KMI_SYMBOL_LIST_STRICT_MODE=0
-KMI_ENFORCED=0
-BUILD_SYSTEM_DLKM=0
-EOF
+            {
+              echo '. ${ROOT_DIR}/${KERNEL_DIR}/build.config.common'
+              echo '. ${ROOT_DIR}/${KERNEL_DIR}/build.config.aarch64'
+              echo '. ${ROOT_DIR}/${KERNEL_DIR}/build.config.gki'
+              echo ''
+              echo 'MAKE_GOALS="${MAKE_GOALS}'
+              echo 'Image'
+              echo '"'
+              echo 'FILES="${FILES}'
+              echo 'arch/arm64/boot/Image'
+              echo '"'
+              echo 'TRIM_NONLISTED_KMI=0'
+              echo 'KMI_SYMBOL_LIST_STRICT_MODE=0'
+              echo 'KMI_ENFORCED=0'
+              echo 'BUILD_SYSTEM_DLKM=0'
+            } > common/build.config.gki.aarch64
 
             echo "DEFCONFIG=gki_defconfig" > common/build.config.gki
 
@@ -1658,22 +1656,22 @@ EOF
             }
 
             if [ -n "${{ inputs.custom_kernel_repo }}" ]; then
-              cat << 'EOF' > ./common/build.config.gki.aarch64
-. ${ROOT_DIR}/${KERNEL_DIR}/build.config.common
-. ${ROOT_DIR}/${KERNEL_DIR}/build.config.aarch64
-. ${ROOT_DIR}/${KERNEL_DIR}/build.config.gki
-
-MAKE_GOALS="${MAKE_GOALS}
-Image
-"
-FILES="${FILES}
-arch/arm64/boot/Image
-"
-TRIM_NONLISTED_KMI=0
-KMI_SYMBOL_LIST_STRICT_MODE=0
-KMI_ENFORCED=0
-BUILD_SYSTEM_DLKM=0
-EOF
+              {
+                echo '. ${ROOT_DIR}/${KERNEL_DIR}/build.config.common'
+                echo '. ${ROOT_DIR}/${KERNEL_DIR}/build.config.aarch64'
+                echo '. ${ROOT_DIR}/${KERNEL_DIR}/build.config.gki'
+                echo ''
+                echo 'MAKE_GOALS="${MAKE_GOALS}'
+                echo 'Image'
+                echo '"'
+                echo 'FILES="${FILES}'
+                echo 'arch/arm64/boot/Image'
+                echo '"'
+                echo 'TRIM_NONLISTED_KMI=0'
+                echo 'KMI_SYMBOL_LIST_STRICT_MODE=0'
+                echo 'KMI_ENFORCED=0'
+                echo 'BUILD_SYSTEM_DLKM=0'
+              } > ./common/build.config.gki.aarch64
               find build/ -name "check_symbol_list" -type f 2>/dev/null | while read -r f; do
                 printf '#!/bin/sh\nexit 0\n' > "$f"
                 chmod +x "$f"
@@ -1791,22 +1789,22 @@ EOF
             }
 
             if [ -n "${{ inputs.custom_kernel_repo }}" ]; then
-              cat << 'EOF' > ./common/build.config.gki.aarch64
-. ${ROOT_DIR}/${KERNEL_DIR}/build.config.common
-. ${ROOT_DIR}/${KERNEL_DIR}/build.config.aarch64
-. ${ROOT_DIR}/${KERNEL_DIR}/build.config.gki
-
-MAKE_GOALS="${MAKE_GOALS}
-Image
-"
-FILES="${FILES}
-arch/arm64/boot/Image
-"
-TRIM_NONLISTED_KMI=0
-KMI_SYMBOL_LIST_STRICT_MODE=0
-KMI_ENFORCED=0
-BUILD_SYSTEM_DLKM=0
-EOF
+              {
+                echo '. ${ROOT_DIR}/${KERNEL_DIR}/build.config.common'
+                echo '. ${ROOT_DIR}/${KERNEL_DIR}/build.config.aarch64'
+                echo '. ${ROOT_DIR}/${KERNEL_DIR}/build.config.gki'
+                echo ''
+                echo 'MAKE_GOALS="${MAKE_GOALS}'
+                echo 'Image'
+                echo '"'
+                echo 'FILES="${FILES}'
+                echo 'arch/arm64/boot/Image'
+                echo '"'
+                echo 'TRIM_NONLISTED_KMI=0'
+                echo 'KMI_SYMBOL_LIST_STRICT_MODE=0'
+                echo 'KMI_ENFORCED=0'
+                echo 'BUILD_SYSTEM_DLKM=0'
+              } > ./common/build.config.gki.aarch64
               find build/ -name "check_symbol_list" -type f 2>/dev/null | while read -r f; do
                 printf '#!/bin/sh\nexit 0\n' > "$f"
                 chmod +x "$f"
